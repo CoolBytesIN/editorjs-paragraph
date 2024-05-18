@@ -1,29 +1,50 @@
-.cb-delimiter {
+.ce-paragraph {
 	line-height: 1.6em;
-	width: 100%;
-	text-align: center;
-	color: black;
+	outline: none;
+	word-wrap: anywhere;
 }
 
-/* Delimiter styles */
-.cb-delimiter-star span {
-	font-size: 30px;
-	line-height: 65px;
-	display: inline-block;
-	height: 30px;
-	letter-spacing: 0.2em;
-	font-weight: 900;
+.ce-paragraph[data-placeholder]:empty::before {
+	content: attr(data-placeholder);
+	color: #707684;
+	font-weight: normal;
+	opacity: 0;
 }
-.cb-delimiter-dash span {
-	margin: 10px;
-	display: inline-block;
-	height: 30px;
-	letter-spacing: 0.6em;
-	font-weight: 900;
+
+/** Show placeholder at the first paragraph if Editor is empty */
+.codex-editor--empty
+	.ce-block:first-child
+	.ce-paragraph[data-placeholder]:empty::before {
+	opacity: 1;
 }
-.cb-delimiter-line hr {
-	font-size: 48px;
-	border-style: solid;
-	border-color: black;
-	border-radius: 3px;
+
+.codex-editor--toolbox-opened
+	.ce-block:first-child
+	.ce-paragraph[data-placeholder]:empty::before,
+.codex-editor--empty
+	.ce-block:first-child
+	.ce-paragraph[data-placeholder]:empty:focus::before {
+	opacity: 0;
+}
+
+.ce-paragraph p:first-of-type {
+	margin-top: 0;
+}
+
+.ce-paragraph p:last-of-type {
+	margin-bottom: 0;
+}
+
+/* Alignment*/
+.ce-paragraph-align-left {
+	text-align: left;
+}
+.ce-paragraph-align-center {
+	text-align: center;
+}
+.ce-paragraph-align-right {
+	text-align: right;
+}
+.ce-paragraph-align-justify {
+	text-align: justify;
 }

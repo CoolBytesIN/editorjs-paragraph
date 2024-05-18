@@ -1,21 +1,20 @@
 require('./index.css');
 
-import { IconDelimiter } from '@codexteam/icons';
+const paragraphIcon = require('./icons/paragraph.js');
+const getAlignmentIcon = require('./icons/alignment.js');
 
 /**
- * Delimiter plugin for Editor.js
+ * Paragraph plugin for Editor.js
  * Supported config:
- *     * defaultStyle {string} (Default: 'star')
- *     * styles {string[]} (Default: Delimiter.DELIMITER_STYLES)
- *     * defaultLineWidth {number} (Default: 25)
- *     * lineWidths {number[]} (Default: Delimiter.LINE_WIDTHS)
- *     * defaultLineThickness {string} (Default: '1px')
- *     * lineThickness {string[]} (Default: Delimiter.LINE_THICKNESS)
+ *     * placeholder {string} (Default: '')
+ *     * preserveBlank {boolean} (Default: false)
+ *     * alignTypes {string[]} (Default: Paragraph.ALIGN_TYPES)
+ *     * defaultAlignType {string} (Default: 'left')
  *
- * @class Delimiter
- * @typedef {Delimiter}
+ * @class Paragraph
+ * @typedef {Paragraph}
  */
-export default class Delimiter {
+export default class Paragraph {
   /**
    * Editor.js Toolbox settings
    *
@@ -25,7 +24,7 @@ export default class Delimiter {
    */
   static get toolbox() {
     return {
-      icon: IconDelimiter, title: 'Delimiter',
+      icon: paragraphIcon, title: 'Paragraph',
     };
   }
 
@@ -41,69 +40,25 @@ export default class Delimiter {
   }
 
   /**
-   * All supported delimiter styles
+   * All supported alignment types
    *
    * @static
    * @readonly
    * @type {string[]}
    */
-  static get DELIMITER_STYLES() {
-    return ['star', 'dash', 'line'];
+  static get ALIGN_TYPES() {
+    return ['left', 'center', 'right', 'justify'];
   }
 
   /**
-   * Default delimiter style
+   * Default alignment type
    *
    * @static
    * @readonly
    * @type {string}
    */
-  static get DEFAULT_DELIMITER_STYLE() {
-    return 'star';
-  }
-
-  /**
-   * All supported widths for delimiter line style
-   *
-   * @static
-   * @readonly
-   * @type {number[]}
-   */
-  static get LINE_WIDTHS() {
-    return [8, 15, 25, 35, 50, 60, 100];
-  }
-
-  /**
-   * Default width for delimiter line style
-   *
-   * @static
-   * @readonly
-   * @type {number}
-   */
-  static get DEFAULT_LINE_WIDTH() {
-    return 25;
-  }
-
-  /**
-   * All supported thickness options for delimiter line style
-   *
-   * @static
-   * @readonly
-   * @type {string[]}
-   */
-  static get LINE_THICKNESS() {
-    return ['0.5px', '1px', '1.5px', '2px', '2.5px', '3px'];
-  }
-
-  /**
-   * Default thickness for delimiter line style
-   *
-   * @static
-   * @readonly
-   * @type {string}
-   */
-  static get DEFAULT_LINE_THICKNESS() {
-    return '1px';
+  static get DEFAULT_ALIGN_TYPE() {
+    return 'left';
   }
 
   /**
@@ -111,143 +66,112 @@ export default class Delimiter {
    *
    * @static
    * @readonly
-   * @type {{ style: boolean; lineWidth: boolean; lineThickness: boolean; }}
+   * @type {{ text: {}; align: boolean; }}
    */
   static get sanitize() {
     return {
-      style: false,
-      lineWidth: false,
-      lineThickness: false,
+      text: {},
+      align: false,
     };
   }
 
   /**
-   * Creates an instance of Delimiter.
+   * Editor.js config to convert one block to another
+   *
+   * @static
+   * @readonly
+   * @type {{ export: string; import: string; }}
+   */
+  static get conversionConfig() {
+    return {
+      export: 'text', // this property of tool data will be used as string to pass to other tool
+      import: 'text', // to this property imported string will be passed
+    };
+  }
+
+  /**
+   * Editor.js config to substitute pasted HTML
+   *
+   * @static
+   * @readonly
+   * @type {{ tags: string[] }}
+   */
+  static get pasteConfig() {
+    return {
+      tags: ['P'],
+    };
+  }
+
+  /**
+   * Creates an instance of Paragraph.
    *
    * @constructor
-   * @param {{ api: {}; config: {}; data: {}; }} props
+   * @param {{ api: {}; readOnly: boolean; config: {}; data: {}; }} props
    */
   constructor({
-    api, config, data,
+    api, readOnly, config, data,
   }) {
     this._api = api;
+    this._readOnly = readOnly;
     this._config = config || {};
     this._data = this._normalizeData(data);
     this._CSS = {
       block: this._api.styles.block,
-      wrapper: 'cb-delimiter',
-      wrapperForStyle: (style) => `cb-delimiter-${style}`,
+      wrapper: 'ce-paragraph',
+      wrapperForAlignment: (alignType) => `ce-paragraph-align-${alignType}`,
     };
     this._element = this._getElement();
   }
 
   /**
-   * All available delimiter styles
-   * - Finds intersection between supported and user selected delimiter styles
+   * All available alignment types
+   * - Finds intersection between supported and user selected alignment types
    *
    * @readonly
    * @type {string[]}
    */
-  get availableDelimiterStyles() {
-    return this._config.styles ? Delimiter.DELIMITER_STYLES.filter(
-      (style) => this._config.styles.includes(style),
-    ) : Delimiter.DELIMITER_STYLES;
+  get availableAlignTypes() {
+    return this._config.alignTypes ? Paragraph.ALIGN_TYPES.filter(
+      (align) => this._config.alignTypes.includes(align),
+    ) : Paragraph.ALIGN_TYPES;
   }
 
   /**
-   * User's default delimiter style
+   * User's default alignment type
    * - Finds union of user choice and the actual default
    *
    * @readonly
    * @type {string}
    */
-  get userDefaultDelimiterStyle() {
-    if (this._config.defaultStyle) {
-      const userSpecified = this.availableDelimiterStyles.find(
-        (style) => style === this._config.defaultStyle,
+  get userDefaultAlignType() {
+    if (this._config.defaultAlignType) {
+      const userSpecified = this.availableAlignTypes.find(
+        (align) => align === this._config.defaultAlignType,
       );
       if (userSpecified) {
         return userSpecified;
       }
       // eslint-disable-next-line no-console
-      console.warn('(ง\'̀-\'́)ง Delimiter Tool: the default style specified is invalid');
+      console.warn('(ง\'̀-\'́)ง Paragraph Tool: the default align type specified is invalid');
     }
-    return Delimiter.DEFAULT_DELIMITER_STYLE;
+    return Paragraph.DEFAULT_ALIGN_TYPE;
   }
 
   /**
-   * All available widths for delimiter line style
-   * - Finds all valid user selected line widths (falls back to default when empty)
+   * User's preference for preserving blanks
    *
    * @readonly
-   * @type {number[]}
+   * @type {boolean}
    */
-  get availableLineWidths() {
-    return this._config.lineWidths ? Delimiter.LINE_WIDTHS.filter(
-      (width) => this._config.lineWidths.includes(width),
-    ) : Delimiter.LINE_WIDTHS;
-  }
-
-  /**
-   * User's default line width
-   * - Finds union of user choice and the actual default
-   *
-   * @readonly
-   * @type {number}
-   */
-  get userDefaultLineWidth() {
-    if (this._config.defaultLineWidth) {
-      const userSpecified = this.availableLineWidths.find(
-        (width) => width === this._config.defaultLineWidth,
-      );
-      if (userSpecified) {
-        return userSpecified;
-      }
-      // eslint-disable-next-line no-console
-      console.warn('(ง\'̀-\'́)ง Delimiter Tool: the default line width specified is invalid');
-    }
-    return Delimiter.DEFAULT_LINE_WIDTH;
-  }
-
-  /**
-   * All available line thickness options
-   * - Finds intersection between supported and user selected line thickness options
-   *
-   * @readonly
-   * @type {string[]}
-   */
-  get availableLineThickness() {
-    return this._config.lineThickness ? Delimiter.LINE_THICKNESS.filter(
-      (thickness) => this._config.lineThickness.includes(thickness),
-    ) : Delimiter.LINE_THICKNESS;
-  }
-
-  /**
-   * User's default line thickness
-   * - Finds union of user choice and the actual default
-   *
-   * @readonly
-   * @type {string}
-   */
-  get userDefaultLineThickness() {
-    if (this._config.defaultLineThickness) {
-      const userSpecified = this.availableLineThickness.find(
-        (thickness) => thickness === this._config.defaultLineThickness,
-      );
-      if (userSpecified) {
-        return userSpecified;
-      }
-      // eslint-disable-next-line no-console
-      console.warn('(ง\'̀-\'́)ง Delimiter Tool: the default line thickness specified is invalid');
-    }
-    return Delimiter.DEFAULT_LINE_THICKNESS;
+  get userPreserveBlank() {
+    return Boolean(this._config.preserveBlank);
   }
 
   /**
    * To normalize input data
    *
    * @param {*} data
-   * @returns {{ style: string; lineWidth: number; lineThickness: string; }}
+   * @returns {{ text: string; level: number; align: string; }}
    */
   _normalizeData(data) {
     const newData = {};
@@ -255,71 +179,23 @@ export default class Delimiter {
       data = {};
     }
 
-    newData.style = data.style || this.userDefaultDelimiterStyle;
-    newData.lineWidth = parseInt(data.lineWidth, 10) || this.userDefaultLineWidth;
-    newData.lineThickness = data.lineThickness || this.userDefaultLineThickness;
+    newData.text = data.text || '';
+    newData.align = data.align || this.userDefaultAlignType;
     return newData;
   }
 
   /**
-   * Current delimiter style
+   * Current alignment type
    *
    * @readonly
    * @type {string}
    */
-  get currentDelimiterStyle() {
-    let delimiterStyle = this.availableDelimiterStyles.find((style) => style === this._data.style);
-    if (!delimiterStyle) {
-      delimiterStyle = this.userDefaultDelimiterStyle;
+  get currentAlignType() {
+    let alignType = this.availableAlignTypes.find((align) => align === this._data.align);
+    if (!alignType) {
+      alignType = this.userDefaultAlignType;
     }
-    return delimiterStyle;
-  }
-
-  /**
-   * Current width for delimiter line style
-   *
-   * @readonly
-   * @type {number}
-   */
-  get currentLineWidth() {
-    let lineWidth = this.availableLineWidths.find((width) => width === this._data.lineWidth);
-    if (!lineWidth) {
-      lineWidth = this.userDefaultLineWidth;
-    }
-    return lineWidth;
-  }
-
-  /**
-   * Current thickness for delimiter line style
-   *
-   * @readonly
-   * @type {string}
-   */
-  get currentLineThickness() {
-    let lineThickness = this.availableLineThickness.find(
-      (thickness) => thickness === this._data.lineThickness,
-    );
-    if (!lineThickness) {
-      lineThickness = this.userDefaultLineThickness;
-    }
-    return lineThickness;
-  }
-
-  createChildElement() {
-    let child;
-    if (this.currentDelimiterStyle === 'star') {
-      child = document.createElement('span');
-      child.textContent = '***';
-      return child;
-    } if (this.currentDelimiterStyle === 'dash') {
-      child = document.createElement('span');
-      child.textContent = '———';
-      return child;
-    }
-    child = document.createElement('hr');
-    child.style.width = `${this.currentLineWidth}%`;
-    child.style.borderWidth = this.currentLineThickness;
-    return child;
+    return alignType;
   }
 
   /**
@@ -332,79 +208,30 @@ export default class Delimiter {
     div.classList.add(
       this._CSS.wrapper,
       this._CSS.block,
-      this._CSS.wrapperForStyle(this.currentDelimiterStyle),
+      this._CSS.wrapperForAlignment(this.currentAlignType),
     );
-    div.appendChild(this.createChildElement());
+    div.contentEditable = !this._readOnly;
+    div.dataset.placeholder = this._api.i18n.t(this._config.placeholder || '');
+    div.innerHTML = this._data.text || '';
     return div;
   }
 
   /**
-   * Callback for Delimiter style change to star
-   */
-  _setStar() {
-    if (this.currentDelimiterStyle !== 'star') {
-      this._data.style = 'star';
-
-      // Replace hr child with span child
-      if (this._element.parentNode) {
-        const newElement = this._getElement();
-        this._element.parentNode.replaceChild(newElement, this._element);
-        this._element = newElement;
-      }
-    }
-  }
-
-  /**
-   * Callback for Delimiter style change to dash
-   */
-  _setDash() {
-    if (this.currentDelimiterStyle !== 'dash') {
-      this._data.style = 'dash';
-
-      // Replace hr child with span child
-      if (this._element.parentNode) {
-        const newElement = this._getElement();
-        this._element.parentNode.replaceChild(newElement, this._element);
-        this._element = newElement;
-      }
-    }
-  }
-
-  /**
-   * Callback for Delimiter style change to line or line width change
+   * Callback for Alignment block tune setting
    *
-   * @param {number} newWidth
+   * @param {string} newAlign
    */
-  _setLine(newWidth) {
-    this._data.lineWidth = newWidth;
+  _setAlignType(newAlign) {
+    this._data.align = newAlign;
 
-    if (this.currentDelimiterStyle !== 'line') {
-      this._data.style = 'line';
-
-      // Replace span child with hr child
-      if (this._element.parentNode) {
-        const newElement = this._getElement();
-        this._element.parentNode.replaceChild(newElement, this._element);
-        this._element = newElement;
+    // Remove old CSS class and add new class
+    Paragraph.ALIGN_TYPES.forEach((align) => {
+      const alignClass = this._CSS.wrapperForAlignment(align);
+      this._element.classList.remove(alignClass);
+      if (newAlign === align) {
+        this._element.classList.add(alignClass);
       }
-    } else {
-      // Change hr width
-      const hrElement = this._element.querySelector('hr');
-      hrElement.style.width = `${newWidth}%`;
-    }
-  }
-
-  /**
-   * Callback for line thickness change
-   *
-   * @param {string} newThickness
-   */
-  _setLineThickness(newThickness) {
-    this._data.lineThickness = newThickness;
-
-    // Change hr thickness
-    const hrElement = this._element.querySelector('hr');
-    hrElement.style.borderWidth = newThickness;
+    });
   }
 
   /**
@@ -420,15 +247,30 @@ export default class Delimiter {
    * Editor.js save method to extract block data from the UI
    *
    * @param {*} blockContent
-   * @returns {{ style: string; lineWidth: number; lineThickness: string; }}
+   * @returns {{ text: string }}
    */
-  save() {
+  save(blockContent) {
     return {
-      style: this.currentDelimiterStyle,
-      lineWidth: this.currentLineWidth,
-      lineThickness: this.currentLineThickness,
+      text: blockContent.innerHTML,
+      align: this.currentAlignType,
     };
   }
+
+  /**
+   * Editor.js validation (on save) code for this block
+   * - Skips empty blocks when preserveBlank isn't enabled
+   *
+   * @param {*} savedData
+   * @returns {boolean}
+   */
+  validate(savedData) {
+    if (!this.userPreserveBlank) {
+      return savedData.text.trim() !== '';
+    }
+    return true;
+  }
+
+
 
   /**
    * Block Tunes Menu items
@@ -436,42 +278,42 @@ export default class Delimiter {
    * @returns {[{*}]}
    */
   renderSettings() {
-    const starStyle = [{
-      icon: IconDelimiter,
-      label: 'Star',
-      onActivate: () => this._setStar(),
-      isActive: this.currentDelimiterStyle === 'star',
+    return Paragraph.ALIGN_TYPES.map((align) => ({
+      icon: getAlignmentIcon(align),
+      label: this._api.i18n.t(align.charAt(0).toUpperCase() + align.slice(1)),
+      onActivate: () => this._setAlignType(align),
+      isActive: align === this.currentAlignType,
       closeOnActivate: true,
-      toggle: 'star',
-    }];
-    const dashStyle = [{
-      icon: IconDelimiter,
-      label: 'Dash',
-      onActivate: () => this._setDash(),
-      isActive: this.currentDelimiterStyle === 'dash',
-      closeOnActivate: true,
-      toggle: 'dash',
-    }];
-    const lineWidths = this.availableLineWidths.map((width) => ({
-      icon: IconDelimiter,
-      label: `Line ${width}%`,
-      onActivate: () => this._setLine(width),
-      isActive: this.currentDelimiterStyle === 'line' && width === this.currentLineWidth,
-      closeOnActivate: true,
-      toggle: 'line',
+      toggle: 'align',
     }));
-    let lineThickness = [];
-    if (this.currentDelimiterStyle === 'line') {
-      lineThickness = this.availableLineThickness.map((thickness) => ({
-        icon: IconDelimiter,
-        label: `Thickness ${parseInt(parseFloat(thickness) * 2, 10)}`,
-        onActivate: () => this._setLineThickness(thickness),
-        isActive: thickness === this.currentLineThickness,
-        closeOnActivate: true,
-        toggle: 'thickness',
-      }));
-    }
+  }
 
-    return [...starStyle, ...dashStyle, ...lineWidths, ...lineThickness];
+  /**
+   * Editor.js onPaste method to substitute pasted HTML
+   * - Doesn't seem to work
+   *
+   * @param {*} event
+   */
+  onPaste(event) {
+    this._data = this._normalizeData({
+      text: event.detail.data.innerHTML,
+      align: this.currentAlignType,
+    });
+
+    /**
+     * We use requestAnimationFrame for performance purposes
+     */
+    window.requestAnimationFrame(() => {
+      this._element = this._getElement();
+    });
+  }
+
+  /**
+   * Editor.js method to merge similar blocks on `Backspace` keypress
+   *
+   * @param {*} data
+   */
+  merge(data) {
+    this._element.innerHTML = this._element.innerHTML + data.text || '';
   }
 }
