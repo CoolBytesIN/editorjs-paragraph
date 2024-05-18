@@ -42,7 +42,7 @@ const editor = new EditorJS({
 |---|---|---|---|---|
 |placeholder|`string`|`Yes`|''|Placeholder text when empty|
 |preserveBlank|`boolean`|`Yes`|false|Indicates whether to include blank paragraphs when saving editor data|
-|alignTypes|`string[]`|`Yes`|['left', 'center', 'right', 'justify']|All supported alignment options (%)|
+|alignTypes|`string[]`|`Yes`|['left', 'center', 'right', 'justify']|All supported alignment options|
 |defaultAlignType|`string`|`Yes`|'left'|Preferred alignment type|
 
 &nbsp;
