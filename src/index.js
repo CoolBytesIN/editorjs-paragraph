@@ -278,14 +278,18 @@ export default class Paragraph {
    * @returns {[{*}]}
    */
   renderSettings() {
-    return Paragraph.ALIGN_TYPES.map((align) => ({
-      icon: getAlignmentIcon(align),
-      label: this._api.i18n.t(align.charAt(0).toUpperCase() + align.slice(1)),
-      onActivate: () => this._setAlignType(align),
-      isActive: align === this.currentAlignType,
-      closeOnActivate: true,
-      toggle: 'align',
-    }));
+    let alignTypes = []
+    if (this.availableAlignTypes.length > 1) {
+      alignTypes = this.availableAlignTypes.map((align) => ({
+        icon: getAlignmentIcon(align),
+        label: this._api.i18n.t(align.charAt(0).toUpperCase() + align.slice(1)),
+        onActivate: () => this._setAlignType(align),
+        isActive: align === this.currentAlignType,
+        closeOnActivate: true,
+        toggle: 'align',
+      }));
+    }
+    return [ ...alignTypes ];
   }
 
   /**
